@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles can go here */
+@layer components {
+  .nav-item-active {
+    @apply bg-blue-700 text-white rounded-full shadow-lg;
+  }
+}
