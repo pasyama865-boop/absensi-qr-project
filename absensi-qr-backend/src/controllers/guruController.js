@@ -1,16 +1,12 @@
 import pool from '../config/db.js';
 import bcrypt from 'bcryptjs';
 
-// =====================================================================
-// BAGIAN 1: CRUD MANAJEMEN GURU (UNTUK ADMIN)
-// =====================================================================
 
-// @desc    Mendapatkan semua data Guru (READ)
 export const getAllGuru = async (req, res, next) => {
     try {
         const query = `
             SELECT 
-                g.guru_id AS id, g.nip, g.nama_guru, g.no_telp, u.username
+            g.guru_id AS id, g.nip, g.nama_guru, g.no_telp, u.username
             FROM guru g
             JOIN users u ON g.guru_id = u.user_id
             ORDER BY g.nama_guru ASC;
@@ -23,7 +19,6 @@ export const getAllGuru = async (req, res, next) => {
     }
 };
 
-// @desc    Menambah Guru Baru & Akun User (CREATE)
 export const createGuru = async (req, res, next) => {
     const { nip, nama, no_telp, username, password } = req.body;
 
@@ -35,8 +30,6 @@ export const createGuru = async (req, res, next) => {
 
     try {
         await client.query('BEGIN');
-
-        // Cek duplikat NIP/Username
         const checkDupl = await client.query(
             'SELECT user_id FROM users WHERE username = $1 UNION SELECT guru_id FROM guru WHERE nip = $2', 
             [username, nip]
@@ -44,8 +37,6 @@ export const createGuru = async (req, res, next) => {
         if (checkDupl.rows.length > 0) {
             throw new Error("Username atau NIP sudah terdaftar.");
         }
-
-        // 1. Buat User
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         const userQuery = `
@@ -55,15 +46,12 @@ export const createGuru = async (req, res, next) => {
         `;
         const userRes = await client.query(userQuery, [username, hashedPassword]);
         const newUserId = userRes.rows[0].user_id;
-
-        // 2. Buat Profil Guru
         const guruQuery = `
             INSERT INTO guru (guru_id, nip, nama_guru, no_telp)
             VALUES ($1, $2, $3, $4)
             RETURNING guru_id, nama_guru;
         `;
         await client.query(guruQuery, [newUserId, nip, nama, no_telp || null]);
-
         await client.query('COMMIT');
 
         res.status(201).json({
@@ -83,7 +71,6 @@ export const createGuru = async (req, res, next) => {
     }
 };
 
-// @desc    Update Data Guru & Akun Login (UPDATE)
 export const updateGuru = async (req, res, next) => {
     const { id } = req.params;
     const { nip, nama, no_telp, username, password } = req.body; 
@@ -92,7 +79,6 @@ export const updateGuru = async (req, res, next) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Update Data Profil Guru
         const guruQuery = `
             UPDATE guru 
             SET nip = $1, nama_guru = $2, no_telp = $3
@@ -100,7 +86,6 @@ export const updateGuru = async (req, res, next) => {
         `;
         await client.query(guruQuery, [nip, nama, no_telp || null, id]);
 
-        // 2. Update Data Login (Username & Password)
         if (username || password) {
             let updateFields = [];
             let values = [];
@@ -147,7 +132,6 @@ export const updateGuru = async (req, res, next) => {
     }
 };
 
-// @desc    Hapus Guru & Akun User (DELETE)
 export const deleteGuru = async (req, res, next) => {
     const { id } = req.params;
 
@@ -170,27 +154,17 @@ export const deleteGuru = async (req, res, next) => {
     }
 };
 
-// =====================================================================
-// BAGIAN 2: DASHBOARD GURU (Khusus Login Guru)
-// Rute: /api/guru/dashboard
-// =====================================================================
 
-// @desc    Ambil Statistik Dashboard Guru
 export const getGuruDashboardStats = async (req, res, next) => {
     const userId = req.user?.id; 
 
     if (!userId) {
-        // Ini adalah respons untuk 401 Unauthorized
         return res.status(401).json({ message: "ID Guru tidak ditemukan. Sesi tidak valid." });
     }
     
-    // Log awal yang bersih
-    console.log(`[Dashboard Guru] Memproses data untuk User ID: ${userId}`);
-
     try {
         const client = await pool.connect();
         try {
-            // 1. Ambil Data Profil Guru
             const guruRes = await client.query(`
                 SELECT guru_id, nama_guru, nip 
                 FROM guru 
@@ -202,7 +176,6 @@ export const getGuruDashboardStats = async (req, res, next) => {
             }
             const guru = guruRes.rows[0];
 
-            // 2. Cek Tahun Ajaran Aktif
             const taRes = await client.query("SELECT ta_id, is_active FROM tahun_ajaran WHERE is_active = TRUE LIMIT 1");
             
             let waliKelasInfo = null;
@@ -210,7 +183,6 @@ export const getGuruDashboardStats = async (req, res, next) => {
             if (taRes.rows.length > 0) {
                 const taId = taRes.rows[0].ta_id;
 
-                // 3. Cek Status Wali Kelas Guru ini
                 const waliRes = await client.query(`
                     SELECT wk.kelas_id, k.nama_kelas, k.grade
                     FROM wali_kelas wk
@@ -221,11 +193,7 @@ export const getGuruDashboardStats = async (req, res, next) => {
                 if (waliRes.rows.length > 0) {
                     const kelasInfo = waliRes.rows[0];
                     const kelasId = kelasInfo.kelas_id;
-
-                    // 4. Hitung Total Siswa di kelas ini
                     const siswaCount = await client.query("SELECT COUNT(*) FROM siswa WHERE kelas_id = $1", [kelasId]);
-
-                    // 5. Hitung Absensi Hari Ini
                     const absensiRes = await client.query(`
                         SELECT status_kehadiran, COUNT(*)
                         FROM absensi a
@@ -235,7 +203,6 @@ export const getGuruDashboardStats = async (req, res, next) => {
                         GROUP BY status_kehadiran
                     `, [kelasId]); 
                     
-                    // Format data absensi
                     const stats = { Hadir: 0, Sakit: 0, Izin: 0, Alpha: 0, Terlambat: 0 };
                     absensiRes.rows.forEach(row => {
                         if (stats[row.status_kehadiran] !== undefined) {
@@ -251,7 +218,6 @@ export const getGuruDashboardStats = async (req, res, next) => {
                 }
             }
 
-            // Kirim Respon
             res.json({
                 guru: guru,
                 is_wali_kelas: !!waliKelasInfo,
@@ -259,7 +225,6 @@ export const getGuruDashboardStats = async (req, res, next) => {
             });
 
         } catch(error) {
-             // LOG UNTUK IDENTIFIKASI ERROR SQL JIKA TERJADI MASALAH DI MASA DEPAN
              console.error("[FATAL SQL ERROR]: Gagal memproses data dashboard guru:", error.message);
              res.status(500).json({ 
                 message: "Internal Server Error: Gagal memproses data dashboard guru.", 

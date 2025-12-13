@@ -29,27 +29,19 @@ export const generateQRCode = async (req, res, next) => {
     const { siswaId } = req.params;
 
     try {
-        // 1. Ambil data siswa (terutama NISN atau ID) untuk dijadikan teks QR
         const siswaQuery = `SELECT nisn FROM siswa WHERE siswa_id = $1;`;
         const siswaResult = await pool.query(siswaQuery, [siswaId]);
 
         if (siswaResult.rowCount === 0) {
             return res.status(404).json({ message: "Siswa tidak ditemukan." });
         }
-        
-        // Asumsikan data QR yang akan dienkripsi adalah NISN siswa
-        // Jika NISN kosong, fallback ke siswaId
         const qrText = siswaResult.rows[0].nisn || siswaId; 
-
-        // 2. Generate QR Code
         const qrDataUrl = await QRCode.toDataURL(qrText, { 
             errorCorrectionLevel: 'H', 
             type: 'image/png',
             margin: 1,
             scale: 8
         });
-
-        // 3. Update data siswa di database
         const updateQuery = `
             UPDATE siswa
             SET qr_data_url = $1
@@ -58,8 +50,6 @@ export const generateQRCode = async (req, res, next) => {
         `;
         
         const result = await pool.query(updateQuery, [qrDataUrl, siswaId]);
-
-        // Karena kita sudah cek di awal, ini hanya sebagai pengaman
         if (result.rowCount === 0) {
             return res.status(404).json({ message: "Gagal update QR: Siswa tidak ditemukan." });
         }
@@ -71,7 +61,6 @@ export const generateQRCode = async (req, res, next) => {
 
     } catch (error) {
         console.error("Error saat generate QR:", error);
-        // Penting: Lewatkan error ke Express error handler
         next(error); 
     }
 };

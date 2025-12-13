@@ -1,5 +1,5 @@
 import pool from '../config/db.js';
-import bcrypt from 'bcryptjs'; // Pastikan library ini sudah diinstall
+import bcrypt from 'bcryptjs';
 
 const getActiveTaId = async (client) => {
     const queryExecutor = client || pool;

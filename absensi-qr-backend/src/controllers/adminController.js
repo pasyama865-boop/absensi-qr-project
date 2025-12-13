@@ -4,14 +4,11 @@ export const getDashboardStats = async (req, res, next) => {
     try {
         const client = await pool.connect();
         try {
-            // 1. Hitung Total Data Master
             const siswaRes = await client.query('SELECT COUNT(*) FROM siswa');
             const guruRes = await client.query('SELECT COUNT(*) FROM guru');
             const kelasRes = await client.query('SELECT COUNT(*) FROM kelas');
             const petugasRes = await client.query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
 
-            // 2. Hitung Absensi Siswa HARI INI berdasarkan Status
-            // (Hadir, Sakit, Izin, Alpha, Terlambat)
             const today = new Date().toISOString().slice(0, 10);
             
             const absensiRes = await client.query(`
@@ -21,24 +18,21 @@ export const getDashboardStats = async (req, res, next) => {
                 GROUP BY status_kehadiran
             `, [today]);
 
-            // Helper untuk mengambil count dari hasil query group by
             const getCount = (status) => {
                 const row = absensiRes.rows.find(r => r.status_kehadiran === status);
                 return row ? parseInt(row.count) : 0;
             };
 
-            const hadirSiswa = getCount('Hadir') + getCount('Terlambat'); // Terlambat dianggap hadir
+            const hadirSiswa = getCount('Hadir') + getCount('Terlambat'); 
             const sakitSiswa = getCount('Sakit');
             const izinSiswa = getCount('Izin');
             const alphaSiswa = getCount('Alpha');
 
-            // 3. Format Tanggal Hari Ini (untuk UI)
             const tanggalHariIni = new Date().toLocaleDateString('id-ID', { 
                 day: 'numeric', month: 'long', year: 'numeric' 
             });
 
             res.status(200).json({
-                // Data Master
                 totalSiswa: parseInt(siswaRes.rows[0].count),
                 totalGuru: parseInt(guruRes.rows[0].count),
                 totalKelas: parseInt(kelasRes.rows[0].count),
@@ -50,7 +44,7 @@ export const getDashboardStats = async (req, res, next) => {
                 izinSiswa,
                 alphaSiswa,
 
-                // Placeholder untuk Guru (Jika nanti fitur absensi guru dibuat)
+                // Data Absensi Guru Hari Ini
                 hadirGuru: 0, 
                 sakitGuru: 0, 
                 izinGuru: 0, 
@@ -68,18 +62,12 @@ export const getDashboardStats = async (req, res, next) => {
     }
 };
 
-// @desc    Mendapatkan Tren Kehadiran Mingguan (7 Hari Terakhir)
-// @route   GET /api/admin/rekap/trend
 export const getMonthlyAttendanceTrend = async (req, res, next) => {
     try {
         const client = await pool.connect();
         try {
-            // Ambil total siswa aktif untuk menghitung persentase
             const totalSiswaRes = await client.query('SELECT COUNT(*) FROM siswa');
-            const totalSiswa = parseInt(totalSiswaRes.rows[0].count) || 1; // Hindari pembagian 0
-
-            // Query kompleks untuk mengambil data 7 hari terakhir
-            // Menggabungkan generate_series (untuk list tanggal) dengan data absensi
+            const totalSiswa = parseInt(totalSiswaRes.rows[0].count) || 1;
             const query = `
                 WITH last_7_days AS (
                     SELECT generate_series(
@@ -100,11 +88,9 @@ export const getMonthlyAttendanceTrend = async (req, res, next) => {
             `;
 
             const trendRes = await client.query(query);
-
-            // Format data untuk Recharts
             const trendData = trendRes.rows.map(row => ({
-                date: row.display_date, // Contoh: "25 Nov"
-                persentaseHadir: (parseInt(row.jumlah_hadir) / totalSiswa).toFixed(2), // 0.00 - 1.00
+                date: row.display_date, 
+                persentaseHadir: (parseInt(row.jumlah_hadir) / totalSiswa).toFixed(2), 
                 jumlahHadir: parseInt(row.jumlah_hadir)
             }));
 

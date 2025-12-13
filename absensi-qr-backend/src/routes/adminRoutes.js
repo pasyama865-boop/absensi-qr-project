@@ -1,7 +1,6 @@
 import express from 'express';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
-// --- CONTROLLER IMPORTS ---
 
 // 1. Dashboard
 import { 
@@ -72,22 +71,13 @@ router.use(protect);
 router.use(authorize(['admin']));
 
 
-// =================================================================
 // RUTE DASHBOARD & REKAP
-// =================================================================
 
 // Dashboard Stats Utama
 router.get('/dashboard-stats', getDashboardStats);
 
 // Tren Kehadiran Mingguan (untuk grafik dashboard)
 router.get('/rekap/trend', getMonthlyAttendanceTrend);
-
-// Rute DUMMY /data dihapus
-
-
-// =================================================================
-// RUTE MASTER DATA
-// =================================================================
 
 // --- A. Tahun Ajaran ---
 router.route('/tahun-ajaran')
@@ -96,13 +86,12 @@ router.route('/tahun-ajaran')
 router.route('/tahun-ajaran/:id')
     .put(updateTahunAjaran)
     .delete(deleteTahunAjaran);
-// Rute untuk mengaktifkan Tahun Ajaran (Asumsi ada di taController)
 router.put('/tahun-ajaran/activate/:id', (req, res) => res.status(200).json({ message: "TA activated (Placeholder)" }));
 
 
 // --- B. Kelas & Wali Kelas ---
 router.get('/wali-kelas-list', getWaliKelasList);
-router.post('/kelas/assign-wali', assignWaliKelas); // RUTE PLOTTING
+router.post('/kelas/assign-wali', assignWaliKelas);
 
 router.route('/kelas')
     .get(getAllKelas)
@@ -121,7 +110,6 @@ router.route('/siswa/:id')
     .put(updateSiswa)
     .delete(deleteSiswa);
 
-// Rute Spesifik: Ambil siswa berdasarkan ID Kelas (Dipakai di Modal Edit Kelas)
 router.get('/kelas/:id/siswa', getSiswaByKelasId);
 
 
@@ -133,24 +121,13 @@ router.route('/guru/:id')
     .put(updateGuru)
     .delete(deleteGuru);
 
-
-// =================================================================
-// RUTE QR CODE GENERATION
-// =================================================================
 router.get('/qr/list-siswa', getSiswaForQR);
 router.post('/qr/generate/:siswaId', generateQRCode);
 
 
-// =================================================================
-// RUTE ABSENSI & LAPORAN
-// =================================================================
 router.get('/kehadiran', getAttendanceLog);
 router.get('/rekap', getRecap);
 
-
-// =================================================================
-// RUTE PENGATURAN SYSTEM
-// =================================================================
 router.put('/settings/password', changePassword);
 router.put('/settings/profile', updateProfile);
 router.get('/settings/system', getSystemSettings);
