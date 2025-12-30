@@ -10,10 +10,10 @@ const getActiveTaId = async (client) => {
 
 
 export const recordScanIn = async (req, res, next) => {
-    const { qr_uuid } = req.body; 
+    const { nisn } = req.body; 
 
-    if (!qr_uuid) {
-        return res.status(400).json({ message: "Kode QR tidak valid atau hilang." });
+    if (!nisn) {
+        return res.status(400).json({ message: "NISN tidak valid atau hilang." });
     }
 
     const client = await pool.connect();
@@ -26,9 +26,9 @@ export const recordScanIn = async (req, res, next) => {
             SELECT s.siswa_id, s.nama_siswa, k.nama_kelas, s.ta_id
             FROM siswa s
             JOIN kelas k ON s.kelas_id = k.kelas_id
-            WHERE s.siswa_id = $1 AND s.ta_id = $2;
+            WHERE s.nisn = $1 AND s.ta_id = $2;
         `;
-        const siswaRes = await client.query(checkSiswaQuery, [qr_uuid, activeTaId]);
+        const siswaRes = await client.query(checkSiswaQuery, [nisn, activeTaId]);
 
         if (siswaRes.rows.length === 0) {
             await client.query('ROLLBACK');

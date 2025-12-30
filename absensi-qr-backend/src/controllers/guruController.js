@@ -194,7 +194,7 @@ export const getGuruDashboardStats = async (req, res, next) => {
                     const kelasInfo = waliRes.rows[0];
                     const kelasId = kelasInfo.kelas_id;
                     const siswaCount = await client.query("SELECT COUNT(*) FROM siswa WHERE kelas_id = $1", [kelasId]);
-                    const absensiRes = await client.query(`
+                    const absensiStatsRes = await client.query(`
                         SELECT status_kehadiran, COUNT(*)
                         FROM absensi a
                         JOIN siswa s ON a.siswa_id = s.siswa_id
@@ -203,8 +203,23 @@ export const getGuruDashboardStats = async (req, res, next) => {
                         GROUP BY status_kehadiran
                     `, [kelasId]); 
                     
+                    const absensiRekapRes = await client.query(`
+                        SELECT 
+                            s.nama_siswa AS nama, 
+                            k.nama_kelas AS kelas, 
+                            TO_CHAR(a.waktu_masuk, 'HH24:MI') AS jam, 
+                            a.status_kehadiran AS status
+                        FROM absensi a
+                        JOIN siswa s ON a.siswa_id = s.siswa_id
+                        JOIN kelas k ON s.kelas_id = k.kelas_id
+                        WHERE s.kelas_id = $1 
+                          AND a.waktu_masuk::date = CURRENT_DATE 
+                        ORDER BY a.waktu_masuk DESC;
+                    `, [kelasId]);
+
+                    
                     const stats = { Hadir: 0, Sakit: 0, Izin: 0, Alpha: 0, Terlambat: 0 };
-                    absensiRes.rows.forEach(row => {
+                    absensiStatsRes.rows.forEach(row => {
                         if (stats[row.status_kehadiran] !== undefined) {
                             stats[row.status_kehadiran] = parseInt(row.count);
                         }
@@ -213,7 +228,8 @@ export const getGuruDashboardStats = async (req, res, next) => {
                     waliKelasInfo = {
                         nama_kelas: kelasInfo.nama_kelas,
                         total_siswa: parseInt(siswaCount.rows[0].count),
-                        kehadiran_hari_ini: stats
+                        kehadiran_hari_ini: stats,
+                        rekap: absensiRekapRes.rows 
                     };
                 }
             }

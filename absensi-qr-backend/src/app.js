@@ -6,6 +6,7 @@ import authRoutes from './routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import guruRoutes from './routes/guruRoutes.js';
 import siswaRoutes from './routes/siswaRoutes.js';
+import absensiRoutes from './routes/absensiRoutes.js';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/guru', guruRoutes);
 app.use('/api/siswa', siswaRoutes);
+app.use('/api/absensi', absensiRoutes);
 
 app.use((err, req, res, next) => {
     console.error(err.stack);

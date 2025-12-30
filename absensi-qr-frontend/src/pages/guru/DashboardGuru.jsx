@@ -223,6 +223,8 @@ const DashboardGuru = () => {
       const message = res.data?.message || "Berhasil";
       const siswa = res.data?.siswa?.nama_siswa || "";
       setScanStatus({ type: "success", text: `${message} • ${siswa}` });
+      // Setelah berhasil scan, muat ulang data dashboard
+      fetchData();
     } catch (err) {
       const msg = err.response?.data?.message || "Gagal memproses";
       setScanStatus({ type: "error", text: msg });
@@ -274,15 +276,13 @@ const DashboardGuru = () => {
       parent.appendChild(div);
     }
 
-    const config = { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 }, 
-        // PENTING: Untuk laptop (terutama Ubuntu), gunakan "user" (kamera depan).
-        // Jangan gunakan "environment" karena laptop jarang punya kamera belakang.
-        facingMode: "user",
-        rememberLastUsedCamera: true
-    };
-    
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 }, 
+                // PENTING: Coba kamera belakang (environment) dulu, jika tidak ada/gagal, coba kamera depan (user).
+                facingMode: { exact: ["environment", "user"] },
+                rememberLastUsedCamera: true
+            };    
     // Instance Html5QrcodeScanner
     const scanner = new Html5QrcodeScanner(regionId, config, false);
 
