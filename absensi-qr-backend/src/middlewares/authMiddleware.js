@@ -1,6 +1,6 @@
 import asyncHandler from 'express-async-handler'; 
 import jwt from 'jsonwebtoken';
-import pool from '../config/db.js'; 
+import * as UserModel from '../models/userModel.js';
 
 export const protect = asyncHandler(async (req, res, next) => {
     let token;
@@ -10,16 +10,16 @@ export const protect = asyncHandler(async (req, res, next) => {
 
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            const result = await pool.query('SELECT user_id, username, role FROM users WHERE user_id = $1', [decoded.id]);
+            const user = await UserModel.findUserById(decoded.id);
             
-            if (result.rows.length === 0) {
+            if (!user) {
                 res.status(401);
                 throw new Error('Otorisasi gagal, pengguna tidak ditemukan di database.');
             }
             req.user = {
-                id: result.rows[0].user_id, 
-                username: result.rows[0].username,
-                role: result.rows[0].role
+                id: user.user_id, 
+                username: user.username,
+                role: user.role
             };
             
             next();

@@ -26,13 +26,12 @@ const API_GURU_DASHBOARD_URL =
 const API_ABSENSI_SCAN_URL =
   (import.meta.env.VITE_API_URL || "http://localhost:5000/api") +
   "/absensi/scan";
-// ---------------------------
 
 /*
   KOMPONEN: Kartu Statistik
 */
 const ModernStatCard = ({ title, small, value, icon, colorClass, bgClass }) => {
-  const Icon = icon; // Assign ke variabel kapital agar bisa jadi JSX
+  const Icon = icon;
   return (
     <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between gap-4">
@@ -51,9 +50,7 @@ const ModernStatCard = ({ title, small, value, icon, colorClass, bgClass }) => {
   );
 };
 
-/*
-  KOMPONEN: Badge Status di Tabel
-*/
+
 const StatusBadge = ({ status }) => {
   if (!status) return <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600">Belum Scan</span>;
   if (status === "Hadir") return <span className="px-3 py-1 text-xs rounded-full bg-green-50 text-green-700">Hadir</span>;
@@ -174,43 +171,36 @@ const DashboardGuru = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // --- State Scanner ---
   const [scannerActive, setScannerActive] = useState(false);
   const [scanStatus, setScanStatus] = useState({ type: "", text: "Siap memindai QR Code..." });
   const [lastScan, setLastScan] = useState(null);
-
-  // --- Refs (Untuk stabilitas fungsi callback) ---
   const scannerRef = useRef(null); 
   const isScanningRef = useRef(true); 
   const onScanSuccessRef = useRef(null);
   const submitAbsensiRef = useRef(null);
-
-  // 1. Fetch Data Dashboard
-  useEffect(() => {
-    let mounted = true;
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(API_GURU_DASHBOARD_URL, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!mounted) return;
-        setDashboardData(res.data);
-      } catch (err) {
-        if (!mounted) return;
-        setError(err.response?.data?.message || err.message || "Gagal memuat data");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    fetchData();
-    return () => { mounted = false; };
+  const fetchData = useCallback(async () => {
+    
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(API_GURU_DASHBOARD_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setDashboardData(res.data);
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || "Gagal memuat data");
+      setLoading(false);
+    }
   }, []);
 
-  // 2. Fungsi Submit Absensi
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchData();
+    };
+    loadData();
+  }, [fetchData]);
+
+  // 3. Fungsi Submit Absensi
   const submitAbsensi = useCallback(async (nisn) => {
     setScanStatus({ type: "loading", text: `Memproses NISN: ${nisn}...` });
     try {
@@ -223,21 +213,18 @@ const DashboardGuru = () => {
       const message = res.data?.message || "Berhasil";
       const siswa = res.data?.siswa?.nama_siswa || "";
       setScanStatus({ type: "success", text: `${message} • ${siswa}` });
-      // Setelah berhasil scan, muat ulang data dashboard
       fetchData();
     } catch (err) {
       const msg = err.response?.data?.message || "Gagal memproses";
       setScanStatus({ type: "error", text: msg });
     }
 
-    // Jeda sebentar sebelum bisa scan lagi (Continuous Scanning Logic)
     setTimeout(() => {
       isScanningRef.current = true;
       setScanStatus({ type: "", text: "Siap memindai siswa berikutnya..." });
     }, 1800);
-  }, []);
+  }, [fetchData]);
 
-  // Simpan submitAbsensi ke ref agar bisa dipanggil di useEffect tanpa dependensi
   useEffect(() => { submitAbsensiRef.current = submitAbsensi; }, [submitAbsensi]);
 
   // 3. Callback Sukses Scan
@@ -245,20 +232,16 @@ const DashboardGuru = () => {
     if (!decodedText) return;
     if (!isScanningRef.current) return;
 
-    // Kunci scanner sementara
     isScanningRef.current = false;
     setLastScan(decodedText);
 
-    // Panggil submit
     if (submitAbsensiRef.current) {
         submitAbsensiRef.current(decodedText);
     }
   }, []);
 
-  // Simpan callback ke ref
   useEffect(() => { onScanSuccessRef.current = onScanSuccess; }, [onScanSuccess]);
 
-  // 4. Inisialisasi Scanner
   const initScanner = (mountId = "dashboard-scanner") => {
     if (scannerRef.current) {
       setScannerActive(true);
@@ -268,7 +251,6 @@ const DashboardGuru = () => {
     const parent = document.getElementById(mountId);
     if (!parent) return;
 
-    // Buat region ID unik
     const regionId = `${mountId}-region`;
     if (!document.getElementById(regionId)) {
       const div = document.createElement("div");
@@ -279,22 +261,17 @@ const DashboardGuru = () => {
             const config = { 
                 fps: 10, 
                 qrbox: { width: 250, height: 250 }, 
-                // PENTING: Coba kamera belakang (environment) dulu, jika tidak ada/gagal, coba kamera depan (user).
                 facingMode: { exact: ["environment", "user"] },
                 rememberLastUsedCamera: true
             };    
-    // Instance Html5QrcodeScanner
     const scanner = new Html5QrcodeScanner(regionId, config, false);
 
-    // Wrapper untuk memanggil ref terbaru
     const successWrapper = (decodedText, decodedResult) => {
       if (onScanSuccessRef.current) onScanSuccessRef.current(decodedText, decodedResult);
     };
 
     try {
       scanner.render(successWrapper, (err) => {
-         // Di Linux, error per-frame sering muncul jika light condition buruk,
-         // kita log warning saja jika errornya kritikal
          if (err?.name === "NotAllowedError") {
              setScanStatus({ type: "error", text: "Izin kamera ditolak!" });
          }
@@ -333,8 +310,6 @@ const DashboardGuru = () => {
   const todayLabel = new Date().toLocaleDateString("id-ID", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-
-  // --- RENDER ---
   if (loading)
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">

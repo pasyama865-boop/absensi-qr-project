@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../config/db.js';
+import * as UserModel from '../models/userModel.js';
 
 const generateToken = (id, role) => {
     return jwt.sign({ id, role }, process.env.JWT_SECRET, {
@@ -16,9 +16,7 @@ export const loginUser = async (req, res) => {
     }
 
     try {
-        const userResult = await pool.query('SELECT user_id, username, password_hash, role FROM users WHERE username = $1', [username]);
-
-        const user = userResult.rows[0];
+        const user = await UserModel.findUserByUsername(username);
 
         if (user && (await bcrypt.compare(password, user.password_hash))) {
             const token = generateToken(user.user_id, user.role);

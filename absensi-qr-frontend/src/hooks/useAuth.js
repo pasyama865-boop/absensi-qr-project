@@ -1,6 +1,10 @@
-// src/hooks/useAuth.js
 import { useContext } from 'react';
-// Pastikan path ini benar untuk mengimpor AuthContext dari folder context
-import AuthContext from '../context/AuthContext'; 
+import AuthContext from '../context/AuthContext';
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error("useAuth harus digunakan di dalam AuthProvider");
+    }
+    return context;
+};
