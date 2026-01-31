@@ -280,8 +280,9 @@ const DashboardAdmin = () => {
           loading={loading}
         />
 
-          // Menggunakan data dummy karena fitur belum ada
+          
         <AttendanceTrendCard
+        // Menggunakan data dummy karena fitur belum ada
           title="Tren Kehadiran Guru"
           data={emptyTrendGuru} 
           chartColor="#047857" 
