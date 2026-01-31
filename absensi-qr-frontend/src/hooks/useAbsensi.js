@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuth } from './useAuth'; 
 
-const API_URL = `${import.meta.env.VITE_API_URL}/guru/absensi`;
+const API_URL = `${import.meta.env.VITE_API_URL || ''}`;
 
 export const useAbsensi = () => {
     const { user } = useAuth();
@@ -13,7 +13,7 @@ export const useAbsensi = () => {
         const token = user.token;
         
         try {
-            const response = await axios.post(`${API_URL}/scan`, 
+            const response = await axios.post(`${API_URL}/absensi/scan`, 
                 { qr_content: qrContent }, 
                 {
                     headers: {
@@ -28,6 +28,32 @@ export const useAbsensi = () => {
             throw new Error(error.response?.data?.message || 'Gagal terhubung ke server absensi.');
         }
     };
-    
-    return { recordAttendance };
+
+    const getRecap = async ({ startDate, endDate, kelasId } = {}) => {
+        if (!user?.token) throw new Error('User not authenticated.');
+        const params = {};
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        if (kelasId) params.kelasId = kelasId;
+        const res = await axios.get(`${API_URL}/absensi/recap`, {
+            headers: { Authorization: `Bearer ${user.token}` },
+            params
+        });
+        return res.data;
+    };
+
+    const getAnalytics = async ({ startDate, endDate, kelasId } = {}) => {
+        if (!user?.token) throw new Error('User not authenticated.');
+        const params = {};
+        if (startDate) params.startDate = startDate;
+        if (endDate) params.endDate = endDate;
+        if (kelasId) params.kelasId = kelasId;
+        const res = await axios.get(`${API_URL}/absensi/analytics`, {
+            headers: { Authorization: `Bearer ${user.token}` },
+            params
+        });
+        return res.data;
+    };
+
+    return { recordAttendance, getRecap, getAnalytics };
 };

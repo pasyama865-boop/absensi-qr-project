@@ -8,12 +8,13 @@ import {
   HomeIcon, UserGroupIcon, AcademicCapIcon,
   ClipboardDocumentListIcon, UserIcon, ArrowPathIcon
 } from '@heroicons/react/24/solid';
+import NotificationForm from '../../components/admin/NotificationForm';
 
 // URL API Backend
 const API_STATS_URL = `${import.meta.env.VITE_API_URL}/admin/dashboard-stats`;
 const API_TREND_URL = `${import.meta.env.VITE_API_URL}/admin/rekap/trend`;
 
-// --- HELPER UTILS ---
+//  HELPER UTILS 
 const getColors = (baseColorHex) => {
     const hexToRgb = (hex) => {
         const r = parseInt(hex.substring(1, 3), 16);
@@ -29,7 +30,7 @@ const getColors = (baseColorHex) => {
     };
 };
 
-// --- COMPONENTS ---
+//  COMPONENTS 
 const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
@@ -158,7 +159,7 @@ const AttendanceTrendCard = (props) => {
 };
 
 
-// --- MAIN DASHBOARD COMPONENT ---
+//  MAIN DASHBOARD COMPONENT
 const DashboardAdmin = () => {
   const [summaryData, setSummaryData] = useState({ 
     totalSiswa: 0, totalGuru: 0, totalKelas: 0, totalPetugas: 0,
@@ -170,8 +171,6 @@ const DashboardAdmin = () => {
   const [trendDataReal, setTrendDataReal] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
-
-  // Fungsi Fetch Semua Data
   const fetchData = async () => {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -227,6 +226,11 @@ const DashboardAdmin = () => {
           </button>
       </div>
 
+      {/* Form Notifikasi untuk Admin */}
+      <div>
+        <NotificationForm onCreated={() => fetchData()} />
+      </div>
+
       {/* --- 1. KARTU STATISTIK UTAMA (4 KOLOM) --- */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Jumlah Siswa" value={summaryData.totalSiswa} icon={UserGroupIcon} bgColor="bg-purple-600" loading={loading} />
@@ -276,9 +280,10 @@ const DashboardAdmin = () => {
           loading={loading}
         />
 
+          // Menggunakan data dummy karena fitur belum ada
         <AttendanceTrendCard
           title="Tren Kehadiran Guru"
-          data={emptyTrendGuru} // Menggunakan data dummy karena fitur belum ada
+          data={emptyTrendGuru} 
           chartColor="#047857" 
           isClientReady={isClient}
           loading={loading}

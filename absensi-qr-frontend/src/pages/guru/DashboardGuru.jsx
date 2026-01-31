@@ -17,9 +17,9 @@ import {
   DocumentDuplicateIcon,
   ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 
-// ----- KONFIGURASI API -----
+//  KONFIGURASI API 
 const API_GURU_DASHBOARD_URL =
   (import.meta.env.VITE_API_URL || "http://localhost:5000/api") +
   "/guru/dashboard";
@@ -27,9 +27,9 @@ const API_ABSENSI_SCAN_URL =
   (import.meta.env.VITE_API_URL || "http://localhost:5000/api") +
   "/absensi/scan";
 
-/*
-  KOMPONEN: Kartu Statistik
-*/
+
+  // KOMPONEN: Kartu Statistik
+
 const ModernStatCard = ({ title, small, value, icon, colorClass, bgClass }) => {
   const Icon = icon;
   return (
@@ -60,9 +60,9 @@ const StatusBadge = ({ status }) => {
   return <span className="px-3 py-1 text-xs rounded-full bg-gray-100 text-gray-600">{status}</span>;
 };
 
-/*
-  KOMPONEN: Widget Scanner (Tertanam)
-*/
+
+//  KOMPONEN: Widget Scanner Tertanam
+
 const ScannerWidget = ({
   isActive,
   onClose,
@@ -158,9 +158,9 @@ const ScannerWidget = ({
   );
 };
 
-/*
-  MAIN COMPONENT: DashboardGuru
-*/
+
+  // MAIN COMPONENT: DashboardGuru
+
 const DashboardGuru = () => {
   const auth = useAuth();
   const logout = auth?.logout || (() => {
